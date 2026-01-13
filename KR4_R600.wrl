@@ -1,0 +1,292 @@
+#VRML V2.0 utf8
+
+EXTERNPROTO collectCoords [
+	field MFString url
+	field MFVec3f point
+	field SFFloat width
+	field SFFloat height
+	field SFVec2f offset
+	field SFFloat raster
+	field SFBool snap2raster
+	field SFFloat angularRaster
+	field SFBool snap2AngRaster
+	exposedField MFNode Nodes2Pose
+]
+"collect3DPoints.wrl#collectCoords"
+PROTO coSys [
+	exposedField SFVec3f scale 200 200 200
+]{
+	Collision {
+		collide	FALSE
+		children [
+			Transform {
+				scale	IS scale
+				children [
+					Shape {
+						geometry IndexedLineSet	{
+							color Color	{ color [ .5 0 0	0 .5 0 	0 0 .5	1 0 0 	0 1 0 	0 0 1	1 1 1 0 0 0] }
+							coord Coordinate {
+								point [
+									0 0 0
+									-1 0 0
+									0 -1 0
+									0 0 -1
+									1 0 0
+									0 1 0
+									0 0 1
+								]
+							}
+							coordIndex [ 0 1 -1 	0 2 -1	0 3 -1	0 4 -1	0 5 -1	0 6 -1 ]
+							colorPerVertex FALSE
+						}
+					}
+				]
+			}
+		]
+	}
+}
+
+PROTO	RotationalLink [
+	field	MFString definition []
+	exposedField SFInt32 rotateAround 2		# rotate about x=1, y=2 z=3; "-" uses the opposite direction!
+	exposedField SFVec3f position 0 0 0
+	exposedField SFRotation	rotation 1 0 0 0
+	exposedField SFVec3f EndPosition 1 0 0
+	exposedField SFRotation	EndOrientation 1 0 0 0
+	exposedField MFNode subchain []
+	exposedField MFNode nochain []
+	field SFVec3f center 0 0 0
+	field SFFloat maxAngle -1
+	field SFFloat minAngle 0
+	field SFFloat maxDegree 0
+	field SFFloat minDegree 0
+	field SFFloat rotationOffset 0
+	exposedField SFVec3f scale 1 1 1
+]{
+	DEF rLink Transform	{
+		scale IS scale
+		center IS	center
+		translation	IS position
+		rotation IS	rotation
+		children [
+			coSys	{ }
+			Inline { url	IS definition }
+			DEF rlSensor CylinderSensor {	
+				autoOffset TRUE
+				diskAngle 0.262
+				enabled TRUE
+				maxAngle IS	maxAngle
+				minAngle IS	minAngle
+				offset IS	rotationOffset
+			}
+			DEF	workaround Switch {
+				whichChoice IS rotateAround
+			}
+			DEF	scr Script {
+				field	SFRotation rot0 0 0 0 0		# intentionally all zeroes!
+				eventIn	SFRotation angleIn
+				eventOut	SFRotation angleOut
+				field	SFRotation angleOutDegree 0 0 0 0
+				field	SFNode joint USE rlSensor
+				field SFInt32 axis 1
+				field	SFNode WA USE workaround
+				field	SFFloat	minDegree IS minDegree
+				field	SFFloat	maxDegree IS maxDegree
+				directOutput TRUE
+				url	"javascript:
+				function initialize() {
+					axis = WA.whichChoice
+					rot0[Math.abs(axis)-1] = axis;	// only the desired axis is made 1; '-1' since indexing starts from 0!
+					if (maxDegree != 0)
+						joint.maxAngle = 2*Math.PI*maxDegree/360;	// convert degrees to radians
+					if (minDegree != 0)
+						joint.minAngle = 2*Math.PI*minDegree/360;	// convert degrees to radians
+					// initialize the rotational offset here, e.g. 	RO=offset*Math.PI/180;
+				}
+				function angleIn(R,ts) {		// rotation, time stamp.
+					rot0[3] = R[3];// orientation should be always assigned.
+					angleOut = rot0;
+					angleOutDegree = rot0;
+					angleOutDegree[3] = 180*rot0[3]/Math.PI;
+					Browser.setDescription('rot='
+						+angleOutDegree[0].toFixed(2) + ' '
+						+angleOutDegree[1].toFixed(2) + ' '
+						+angleOutDegree[2].toFixed(2) + ' '
+						+angleOutDegree[3].toLocaleString('en-US', // this attempts to format the number so that the message has constant width:
+					{
+						signDisplay: \"always\",
+							minimumIntegerDigits: 3,
+							minimumFractionDigits: 3,
+							maximumFractionDigits: 3
+					}
+					)
+						);
+				}
+				"
+			}
+			Group {
+				children IS subchain
+			}
+			Switch {
+				whichChoice	-1
+				choice IS	subchain
+			}
+		]
+	}
+	ROUTE	rlSensor.rotation_changed	TO scr.angleIn
+	ROUTE	scr.angleOut TO	rLink.rotation
+}
+
+DEF KR4R600 Transform	{
+	children [
+		WorldInfo	{
+			info [
+				"Based on CAD data from Kuka GmbH"
+				"Developed further during the classes 'Applied Robotics', read by N. Avgustinov in 2023-2026"
+				"Expected readiness of the second stage: December 2025"
+				"Hansecampus Stade, 2025"
+			]
+			title "µ-Development environment for Robots @ PFH.de"
+		}
+		NavigationInfo {
+			avatarSize [0.25, 1.6, 0.75]
+			#	avatarSize [25, 1600, 75]
+			headlight TRUE
+			speed 9
+			type ["EXAMINE", "ANY"]
+			visibilityLimit 0
+		}
+
+		Transform {
+			scale	.001	.001	.001
+			rotation -1 0 0 1.57
+			translation	0 -.35 0
+			children [
+				DEF	robot Collision	{
+					collide	FALSE
+					children [
+						Inline { url "KR_4_R600_V01_X_T_base.wrz" }
+						DEF A1 RotationalLink	{ definition "KR_4_R600_V01_X_T_0.wrz" position 0 0 185 rotateAround 3 minDegree -170 maxDegree 170 
+							subchain [ DEF A2 RotationalLink	{ definition "KR_4_R600_V01_X_T_1.wrz" position 0 0 130 rotateAround 2 minDegree -95 maxDegree 95 rotationOffset 1.57	
+									subchain [ DEF A3 RotationalLink	{ definition "KR_4_R600_V01_X_T_2.wrz" position 0 0 290 rotateAround -2 rotationOffset .57 minDegree -210 maxDegree	62
+											subchain [ DEF A4 RotationalLink	{ definition "KR_4_R600_V01_X_T_3.wrz" position 170 0 20 rotateAround 1 minDegree	-185 maxDegree 185
+													subchain [ DEF A5 RotationalLink	{ definition "KR_4_R600_V01_X_T_4.wrz" position 190 0 0 rotateAround -2 center -58 0 0 minDegree	-120 maxDegree 120
+															subchain [ DEF A6 RotationalLink	{ definition "KR_4_R600_V01_X_T_5.wrz" position 0 0 0 rotateAround 1 minDegree	-350 maxDegree 350
+																	subchain [] }
+															] }
+													] }
+											] }
+									] }
+							] }
+					]
+				}
+			]
+		}
+
+		Group {
+			children [
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 0 1 0
+					position 0 0 1
+					description "front"
+				}
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 1 0 -1.57
+					position -1 0 0
+					description "left"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 1 0 -1.57
+					position -1 0 0
+					description "left"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 1 0 -1.57
+					position -1 0 0
+					description "left"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 1 0 -1.57
+					position -1 0 0
+					description "left"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 1 0 -1.57
+					position -1 0 0
+					description "left"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 1 0 -1.57
+					position -1 0 0
+					description "left"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 1 0 1.57
+					position 1 0 0
+					description "right"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 1 0 0 -1.57
+					position 0 1 0
+					description "top"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 1 0 0 1.57
+					position 0 -1 0
+					description "bottom"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation -.7 .7 0 .9
+					position 1 1 1
+					description "axono"
+				}
+
+				Viewpoint {
+					fieldOfView 0.785398
+					jump TRUE
+					orientation 0 0 1 0
+					position 0 0 10
+					description "distant"
+
+				}
+			]
+		}
+
+		#Viewpoint {
+		#	orientation 1 0 0 1.57135	#BAD: this is causing problems!
+		#	position 0 -1862 560
+		#	description "vp0"
+		#}
+	]
+}

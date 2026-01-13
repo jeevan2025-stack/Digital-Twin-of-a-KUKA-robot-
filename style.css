@@ -1,0 +1,624 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header { padding: 10px 20px; background: white; border-bottom: 1px solid #ddd; }
+
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* The Black Portion - Expanded to 75% */
+#X3D-container {
+    flex: 4; 
+    background: #000;
+    position: relative;
+    overflow: hidden;
+}
+
+.X3D {
+    width: 100%;
+    height: 100%; /* Fill the entire container */
+    border: none;
+    display: block;
+}
+
+/* Sidebar Controls */
+#controls {
+    flex: 1;
+    background: #fff;
+    padding: 20px;
+    border-left: 1px solid #ddd;
+    overflow-y: auto;
+}
+
+.bottom-controls {
+    background: #fff;
+    padding: 15px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.input-group, .quick-actions, .export-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 5px;
+}
+
+input[type="number"] { width: 60px; }
+input[type="text"] { flex-grow: 1; }
+button { cursor: pointer; padding: 5px 10px; }
+
+/* Tooltip Styles */
+.slider-container {
+    position: relative;
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.slider-container:hover {
+    background-color: #f5f5f5;
+}
+
+.tooltip {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 15px;
+    background-color: #333;
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    pointer-events: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: #333;
+}
+
+.slider-container:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.tooltip-title {
+    font-weight: bold;
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #4CAF50;
+}
+
+.tooltip-info {
+    line-height: 1.6;
+}
+
+.tooltip-info div {
+    margin: 2px 0;
+}
+
+/* 3D Canvas Overlay Tooltip */
+#link-tooltip-overlay {
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.95);
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+    border: 2px solid #4CAF50;
+    max-width: 320px;
+    min-width: 250px;
+    backdrop-filter: blur(4px);
+    transform: translate(0, 0);
+    will-change: left, top, opacity;
+    user-select: none;
+}
+
+#link-tooltip-overlay.visible {
+    opacity: 1;
+}
+
+#link-tooltip-overlay .link-title {
+    font-weight: bold;
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: #4CAF50;
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#link-tooltip-overlay .link-info {
+    line-height: 1.8;
+    font-size: 12px;
+}
+
+#link-tooltip-overlay .link-info div {
+    margin: 4px 0;
+    padding: 2px 0;
+}
+
+#link-tooltip-overlay .link-info strong {
+    color: #8bc34a;
+    display: inline-block;
+    min-width: 120px;
+    font-weight: 600;
+}
+
+/* Network Connectivity Panel Styles */
+/* ========== NEW NETWORK HMI PANEL ========== */
+.network-hmi {
+    display: none;
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 450px;
+    max-height: 80vh;
+    background: #1a1a2e;
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    z-index: 1000;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+}
+
+.hmi-titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+    border-bottom: 2px solid #00d9ff;
+    cursor: move;
+    user-select: none;
+}
+
+.hmi-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.hmi-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.hmi-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hmi-btn:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.hmi-btn.hmi-close:hover {
+    background: #e74c3c;
+}
+
+.hmi-content {
+    padding: 15px;
+    max-height: calc(80vh - 60px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Custom scrollbar for HMI content */
+.hmi-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.hmi-content::-webkit-scrollbar-track {
+    background: #16213e;
+    border-radius: 5px;
+}
+
+.hmi-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #00d9ff, #00ff88);
+    border-radius: 5px;
+    border: 2px solid #16213e;
+}
+
+.hmi-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #00c4e6, #00e67a);
+}
+
+.hmi-section {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid rgba(0,217,255,0.2);
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #00d9ff;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,217,255,0.3);
+}
+
+.form-row {
+    margin-bottom: 12px;
+}
+
+.form-row label {
+    display: block;
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 5px;
+}
+
+.form-row input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0f0f23;
+    border: 1px solid #333;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 13px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.form-row input:focus {
+    outline: none;
+    border-color: #00d9ff;
+}
+
+.form-row input[readonly] {
+    background: #1a1a2e;
+    color: #888;
+}
+
+.btn-row {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.hmi-action-btn {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hmi-action-btn.connect {
+    background: linear-gradient(135deg, #00d9ff, #00ff88);
+    color: #000;
+}
+
+.hmi-action-btn.connect:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0,217,255,0.4);
+}
+
+.hmi-action-btn.disconnect {
+    background: #333;
+    color: #fff;
+}
+
+.hmi-action-btn.disconnect:hover:not(:disabled) {
+    background: #e74c3c;
+}
+
+.hmi-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.hmi-action-btn.small {
+    flex: none;
+    padding: 8px 15px;
+    font-size: 11px;
+    background: #333;
+    color: #fff;
+}
+
+.hmi-action-btn.small:hover {
+    background: #00d9ff;
+    color: #000;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.connection-status .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.connection-status.disconnected {
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+}
+
+.connection-status.disconnected .status-dot {
+    background: #e74c3c;
+}
+
+.connection-status.connected {
+    background: rgba(0, 255, 136, 0.2);
+    border: 1px solid #00ff88;
+}
+
+.connection-status.connected .status-dot {
+    background: #00ff88;
+    box-shadow: 0 0 10px #00ff88;
+}
+
+.connection-status.connecting {
+    background: rgba(255, 193, 7, 0.2);
+    border: 1px solid #ffc107;
+}
+
+.connection-status.connecting .status-dot {
+    background: #ffc107;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #00d9ff;
+}
+
+.checkbox-row label {
+    font-size: 13px;
+    color: #ccc;
+    cursor: pointer;
+}
+
+.message-log-box {
+    background: #0f0f23;
+    border: 1px solid #333;
+    border-radius: 5px;
+    height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+}
+
+.message-log-box::-webkit-scrollbar {
+    width: 6px;
+}
+
+.message-log-box::-webkit-scrollbar-thumb {
+    background: #00d9ff;
+    border-radius: 3px;
+}
+
+.example-item {
+    background: #0f0f23;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.example-item strong {
+    display: block;
+    font-size: 12px;
+    color: #00d9ff;
+    margin-bottom: 5px;
+}
+
+.example-item code {
+    display: block;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+    color: #00ff88;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+/* Minimized state */
+.network-hmi.minimized .hmi-content {
+    display: none;
+}
+
+/* Maximized state */
+.network-hmi.maximized {
+    top: 20px !important;
+    left: 20px !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    width: auto !important;
+    max-height: none !important;
+    transform: none !important;
+}
+
+.network-hmi.maximized .hmi-content {
+    max-height: calc(100vh - 120px);
+}
+
+/* Legacy styles - keeping for compatibility */
+.log-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.log-container {
+    max-height: 200px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+.log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-time {
+    color: #999;
+    margin-right: 8px;
+}
+
+.log-entry.error {
+    color: #c62828;
+}
+
+.log-entry.success {
+    color: #2e7d32;
+}
+
+.log-entry.info {
+    color: #1976d2;
+}
+
+.log-entry.sent {
+    color: #7b1fa2;
+}
+
+.log-entry.received {
+    color: #00897b;
+}
+
+.example-box {
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.example-box:last-child {
+    margin-bottom: 0;
+}
+
+.example-box p {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #555;
+}
+
+.example-box code {
+    display: block;
+    background: #f5f5f5;
+    padding: 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    word-wrap: break-word;
+    color: #333;
+}
+
+.connectivity-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#toggleConnectivity {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#toggleConnectivity:hover {
+    opacity: 0.9;
+}
+
+.mqtt-status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.mqtt-status.online {
+    background: #4caf50;
+    box-shadow: 0 0 8px #4caf50;
+}
+
+.mqtt-status.offline {
+    background: #9e9e9e;
+}

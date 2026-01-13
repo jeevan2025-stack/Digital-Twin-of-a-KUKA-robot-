@@ -1,0 +1,57 @@
+#VRML V2.0 utf8
+# ... (end of RobotJoint PROTO around source 11)
+      Group {
+        children IS children
+      }
+    ]
+  }
+}
+# --- NEW PROTO DEFINITIONS START HERE ---
+
+PROTO AxisMapper [
+  field SFVec3f axis 0 1 0
+  eventIn SFRotation rotation_in
+  eventOut SFRotation rotation_out
+] {
+  Script {
+    field SFVec3f axis IS axis
+    eventIn SFRotation rotation_in IS rotation_in
+    eventOut SFRotation rotation_out IS rotation_out
+    url "javascript:
+      function rotation_in(v) {
+        rotation_out = new SFRotation(axis.x, axis.y, axis.z, v[3]);
+      }
+    "
+  }
+}
+
+PROTO AngleToRotation [
+  field SFVec3f axis 0 1 0
+  field SFFloat minAngle -3.14159
+  field SFFloat maxAngle  3.14159
+  eventIn SFFloat set_angle
+  eventOut SFRotation rot_out
+]{
+  Script {
+    field SFVec3f axis IS axis
+    field SFFloat minAngle IS minAngle
+    field SFFloat maxAngle IS maxAngle
+    eventIn SFFloat set_angle IS set_angle
+    eventOut SFRotation rot_out IS rot_out
+    url "javascript:
+      function set_angle(a){
+        // wrap to [-pi, pi]
+        var ang = Math.atan2(Math.sin(a), Math.cos(a));
+        // clamp
+        if (ang < minAngle) ang = minAngle;
+        if (ang > maxAngle) ang = maxAngle;
+        rot_out = new SFRotation(axis.x, axis.y, axis.z, ang);
+      }
+    "
+  }
+}
+
+# --- NEW PROTO DEFINITIONS END HERE ---
+
+DEF J0_AxisConverter Script {  # <--- This is where the old code resumes 
+# ...

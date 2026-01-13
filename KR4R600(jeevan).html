@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Designing a simplified digital twin of a robot</title>
+    <link rel="stylesheet" type="text/css" href="https://create3000.github.io/code/x_ite/latest/x_ite.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script type="text/javascript" src="https://create3000.github.io/code/x_ite/latest/x_ite.min.js"></script>
+    <script src="https://unpkg.com/mqtt@5.3.4/dist/mqtt.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <h2>KR4R600 Playground</h2>
+        <nav>
+            <a href="index.html">Home</a> |
+            <a href="overview.html">Overview</a> |
+            <a href="digiTwin.html">Digital Twin</a>
+        </nav>
+    </header>
+
+    <main class="main-container">
+        <section id="X3D-container">
+            <x3d-canvas class="X3D" timings="false" id="x3dCanvas" update="auto" src="KR4R600_full_assembly(jeevan).wrl"></x3d-canvas>
+            <div id="link-tooltip-overlay"></div>
+        </section>
+
+        <aside id="controls">
+            <!-- Controls content will be dynamically generated -->
+        </aside>
+        
+        <section id="connectivity-panel" class="network-hmi">
+            <div class="hmi-titlebar">
+                <span class="hmi-title">🌐 Network Connectivity</span>
+                <div class="hmi-buttons">
+                    <button class="hmi-btn" id="minimizeConnectivity">_</button>
+                    <button class="hmi-btn" id="maximizeConnectivity">☐</button>
+                    <button class="hmi-btn hmi-close" id="closeConnectivity">✕</button>
+                </div>
+            </div>
+            <div class="hmi-content">
+                <div class="hmi-section">
+                    <div class="section-title">MQTT Broker Configuration</div>
+                    <div class="form-row">
+                        <label>Broker URL:</label>
+                        <input type="text" id="mqttBroker" value="wss://broker.emqx.io:8084/mqtt">
+                    </div>
+                    <div class="form-row">
+                        <label>Client ID:</label>
+                        <input type="text" id="mqttClientId" readonly>
+                    </div>
+                    <div class="form-row">
+                        <label>Username:</label>
+                        <input type="text" id="mqttUsername" placeholder="(optional)">
+                    </div>
+                    <div class="form-row">
+                        <label>Password:</label>
+                        <input type="password" id="mqttPassword" placeholder="(optional)">
+                    </div>
+                    <div class="btn-row">
+                        <button id="connectMqtt" class="hmi-action-btn connect">Connect</button>
+                        <button id="disconnectMqtt" class="hmi-action-btn disconnect" disabled>Disconnect</button>
+                    </div>
+                    <div id="connectionStatus" class="connection-status disconnected">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Disconnected</span>
+                    </div>
+                </div>
+
+                <div class="hmi-section">
+                    <div class="section-title">Topic Configuration</div>
+                    <div class="form-row">
+                        <label>Command Topic (Subscribe):</label>
+                        <input type="text" id="commandTopic" value="robot/command">
+                    </div>
+                    <div class="form-row">
+                        <label>Pose Topic (Publish):</label>
+                        <input type="text" id="poseTopic" value="robot/pose">
+                    </div>
+                    <div class="form-row">
+                        <label>Publish Rate (Hz):</label>
+                        <input type="number" id="publishRate" value="10" min="1" max="100">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="autoPublish" checked>
+                        <label for="autoPublish">Auto-publish pose changes</label>
+                    </div>
+                </div>
+
+                <div class="hmi-section">
+                    <div class="section-title">Message Log</div>
+                    <div class="btn-row">
+                        <button id="clearLog" class="hmi-action-btn small">Clear</button>
+                        <button id="testPublish" class="hmi-action-btn small">Test Publish</button>
+                    </div>
+                    <div id="messageLog" class="message-log-box"></div>
+                </div>
+
+                <div class="hmi-section">
+                    <div class="section-title">Command Examples</div>
+                    <div class="example-item">
+                        <strong>Move to Position:</strong>
+                        <code>{"type":"move","joints":{"A1":0,"A2":-90,"A3":90,"A4":0,"A5":0,"A6":0}}</code>
+                    </div>
+                    <div class="example-item">
+                        <strong>Move Single Joint:</strong>
+                        <code>{"type":"move_joint","joint":"A1","angle":45}</code>
+                    </div>
+                    <div class="example-item">
+                        <strong>Home Position:</strong>
+                        <code>{"type":"home"}</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bottom-controls">
+        <div class="position-inputs">
+            <strong>Move To:</strong>
+            <input type="number" id="X" value="0" step="0.001" /> X
+            <input type="number" id="Y" value="0" step="0.001" /> Y
+            <input type="number" id="Z" value="0" step="0.001" /> Z
+            <button type="button" id="moveToPose">Go</button>
+        </div>
+        <div class="orientation-inputs">
+            <select id="orientation">
+                <option value="RPY">RPY</option>
+                <option value="XYZ">XYZ Euler</option>
+            </select>
+            <input type="number" id="O1" value="0" />
+            <input type="number" id="O2" value="0" />
+            <input type="number" id="O3" value="0" />
+            <button type="button" id="setOrientation">Set Orientation</button>
+        </div>
+        <div class="command-line">
+            <label for="command">KRL Command:</label>
+            <input type="text" id="command" placeholder="LIN {X 100...}" />
+            <button type="button" id="execute">Execute</button>
+        </div>
+        <div class="connectivity-toggle">
+            <button type="button" id="toggleConnectivity">🌐 Network</button>
+            <span id="mqttStatus" class="mqtt-status offline">●</span>
+        </div>
+    </footer>
+
+    <script src="sliderControl4X3D.js?v=2"></script>
+    <script>
+        // Function to dynamically create controls content
+        function createControlsContent() {
+            const controlsDiv = document.getElementById('controls');
+            
+            // Create info panel
+            const infoPanel = document.createElement('div');
+            infoPanel.className = 'info-panel';
+            infoPanel.innerHTML = `
+                <p id="angleValues"><strong>Joints:</strong> [A1=0°, A2=0°, A3=0°, A4=0°, A5=0°, A6=0°]</p>
+                <p id="tcpPosition"><strong>TCP:</strong> [X=0.000, Y=0.000, Z=0.000]</p>
+                <button type="button" id="resetJoints">Reset to Home</button>
+            `;
+            controlsDiv.appendChild(infoPanel);
+            
+            // Create slider list container
+            const sliderList = document.createElement('div');
+            sliderList.id = 'slider-list';
+            controlsDiv.appendChild(sliderList);
+            
+            // Create config management section
+            const configManagement = document.createElement('div');
+            configManagement.className = 'config-management';
+            configManagement.innerHTML = `
+                <h4>Configuration Management</h4>
+                <div class="input-group">
+                    <input type="text" id="configName" placeholder="Config Name">
+                    <button type="button" id="saveNamedConfig">Save</button>
+                </div>
+                <div class="input-group">
+                    <select id="configSelect">
+                        <option value="">-- Select --</option>
+                    </select>
+                    <button type="button" id="loadNamedConfig">Load</button>
+                    <button type="button" id="deleteConfig">Delete</button>
+                </div>
+                <div class="quick-actions">
+                    <button type="button" id="saveConfig">Save to Browser</button>
+                    <button type="button" id="loadConfig">Load from Browser</button>
+                </div>
+                <div class="export-actions">
+                    <button type="button" id="exportJSON">Export JSON</button>
+                    <button type="button" id="importJSON">Import JSON</button>
+                    <input type="file" id="fileInput" accept=".json" style="display: none;">
+                </div>
+            `;
+            controlsDiv.appendChild(configManagement);
+            
+            // Create status paragraph
+            const statusP = document.createElement('p');
+            statusP.id = 'status';
+            statusP.textContent = 'Status: Ready';
+            controlsDiv.appendChild(statusP);
+        }
+
+        window.addEventListener('load', () => {
+            // First, create the controls content dynamically
+            createControlsContent();
+            
+            // Configuration for each axis
+            const axisConfig = [
+                { name: "A1", min: -165, max: 165, init: 0 },
+                { name: "A2", min: -100, max: 57, init: 0 },
+                { name: "A3", min: -200, max: 47, init: 0 },
+                { name: "A4", min: -180, max: 180, init: 0 },
+                { name: "A5", min: -115, max: 115, init: 0 },
+                { name: "A6", min: -345, max: 345, init: 0 }
+            ];
+
+            // Initialize all sliders inside the "slider-list" div
+            axisConfig.forEach(cfg => {
+                new SliderControlledX3DElement({ 
+                    nodeName: cfg.name,
+                    minAngle: cfg.min,
+                    maxAngle: cfg.max,
+                    initialValue: cfg.init,
+                    label: cfg.name,
+                    parentContainerId: "slider-list"
+                });
+            });
+
+            // Tooltips for additional components (Gripper, AdapterFlange, Base) will be
+            // set up automatically when A6 is initialized (see setupChildComponentTooltips)
+
+            // Re-bind the reset and config buttons from your original code
+            const resetButton = document.getElementById('resetJoints');
+            resetButton.addEventListener('click', () => {
+                const homePositions = { 'A1': 0, 'A2': 0, 'A3': 0, 'A4': 0, 'A5': 0, 'A6': 0 };
+                SliderControlledX3DElement.loadAllAngles(homePositions, true, 1000); // Use the static method for smooth reset
+            });
+
+            // Logic for Config Management (Named Save/Load)
+            function refreshConfigList() {
+                const select = document.getElementById('configSelect');
+                const list = SliderControlledX3DElement.getConfigList();
+                select.innerHTML = '<option value="">-- Select --</option>';
+                list.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name; opt.textContent = name;
+                    select.appendChild(opt);
+                });
+            }
+
+            document.getElementById('saveNamedConfig').onclick = () => {
+                const name = document.getElementById('configName').value;
+                if(SliderControlledX3DElement.saveNamedConfig(name)) refreshConfigList();
+            };
+
+            document.getElementById('loadNamedConfig').onclick = () => {
+                SliderControlledX3DElement.loadNamedConfig(document.getElementById('configSelect').value, true);
+            };
+
+            // Quick Save/Export Handlers
+            document.getElementById('saveConfig').onclick = () => SliderControlledX3DElement.saveToLocalStorage();
+            document.getElementById('loadConfig').onclick = () => SliderControlledX3DElement.loadFromLocalStorage('robotAngles', true);
+            document.getElementById('exportJSON').onclick = () => {
+                const blob = new Blob([SliderControlledX3DElement.exportAsJSON()], {type: 'application/json'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'robot_config.json';
+                a.click();
+            };
+            
+            refreshConfigList();
+            
+            // Initialize MQTT Connectivity
+            RobotMQTT.init();
+        });
+    </script>
+    <script src="robotMQTT.js"></script>
+</body>
+</html>
